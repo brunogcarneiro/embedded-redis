@@ -1,10 +1,9 @@
 package brunogcarneiro.embeddedredis;
 
-import redis.clients.jedis.Jedis;
-
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 
 public class TestingEmbeddedRedis {
 
@@ -13,37 +12,45 @@ public class TestingEmbeddedRedis {
     public static final String SECOND = "second";
     public static final String VALUE = "value";
 
-    private static Jedis redisClient;
-
-    public static void main(String... args){
+    public static void main(String... args) throws IOException {
         System.out.println("Start");
 
-        System.out.println(myOperation());
+        Optional<Map<String, String>> ret = myOperation();
+
+        ret.ifPresent(System.out::println);
 
         System.out.println("End");
     }
 
-    public static Map<String,String> myOperation(){
-        Jedis client = getRedisClient();
+    public static Optional<Map<String, String>> myOperation() {
 
-        client.del(KEY);
+        Map<String, String> myMap = null;
+
+        try (RedisClient redisClient = RedisClient.getInstance()){
+
+            myMap = generateMap(redisClient);
+
+        } catch (Exception e) {
+            System.out.println("Catched error: "+e.getMessage());
+            e.printStackTrace();
+        }
+
+        return Optional.ofNullable(myMap);
+    }
+
+    public static Map<String,String> generateMap(RedisClient redisClient){
+
+        redisClient.del(KEY);
 
         Map<String, String> ret = new HashMap<>();
 
-        ret.put(FIRST, client.get(KEY));
+        ret.put(FIRST, redisClient.get(KEY));
 
-        client.set(KEY, VALUE);
+        redisClient.set(KEY, VALUE);
 
-        ret.put(SECOND, client.get(KEY));
+        ret.put(SECOND, redisClient.get(KEY));
 
         return ret;
     }
 
-    private static Jedis getRedisClient(){
-        if (Objects.isNull(redisClient)){
-            redisClient = new Jedis();
-        }
-
-        return redisClient;
-    }
 }
